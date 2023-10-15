@@ -19,6 +19,26 @@ export default function Home() {
     };
   }, []);
 
+  function handleOrientation(event) {
+    const { alpha, beta, gamma } = event;
+    setGyroData({ alpha, beta, gamma });
+  }
+
+  function requestGyroAccess() {
+    if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+      DeviceOrientationEvent.requestPermission()
+        .then(permissionState => {
+          if (permissionState === 'granted') {
+            window.addEventListener('deviceorientation', handleOrientation);
+          }
+        })
+        .catch(console.error);
+    } else {
+      // For non-iOS 13+ devices
+      window.addEventListener('deviceorientation', handleOrientation);
+    }
+  }
+  
 
   return (
     <main className={styles.main}>
@@ -37,7 +57,7 @@ export default function Home() {
       </div>
 
       <div >
-
+      <button onClick={requestGyroAccess}>Request Gyroscope Access</button>
       </div>
 
     </main>
