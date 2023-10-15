@@ -1,22 +1,14 @@
 "use client"
-import Image from 'next/image'
 import styles from './page.module.css'
-import YouTube from 'react-youtube';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 export default function Home() {
   const [gyroData, setGyroData] = useState({ alpha: 0, beta: 0, gamma: 0 });
-  const [video1Playing, setVideo1Playing] = useState(true);
-  const [video1Volume, setVideo1Volume] = useState(100); // 100% volume
+  const [volumes, setVolumes] = useState({ audio1: 0, audio2: 0 });
 
-  const [video2Playing, setVideo2Playing] = useState(true);
-  const [video2Volume, setVideo2Volume] = useState(0); // 0% volume
+  const audio1Ref = useRef(null);
+  const audio2Ref = useRef(null);
 
-  function playAllVideos() {
-    video1Ref.playVideo();
-    video2Ref.playVideo();
-  }
-  
   useEffect(() => {
     const handleOrientation = (event) => {
       const { alpha, beta, gamma } = event;
@@ -30,18 +22,29 @@ export default function Home() {
     };
   }, []);
 
-  function handleOrientation(event) {
-    const { alpha, beta, gamma } = event;
-    setGyroData({ alpha, beta, gamma });
+  useEffect(() => {
+    const absoluteBeta = Math.abs(gyroData.beta);  // Consider absolute value
+    const normalizedBeta = absoluteBeta / 90;
+    let calculatedAudio1Volume = Math.floor(100 * normalizedBeta);
+    let calculatedAudio2Volume = Math.floor(100 * (1 - normalizedBeta));
 
-    const normalizedBeta = (beta + 180) / 360;
+    // Ensure volume is between 0 and 100
+    calculatedAudio1Volume = Math.min(100, Math.max(0, calculatedAudio1Volume));
+    calculatedAudio2Volume = Math.min(100, Math.max(0, calculatedAudio2Volume));
 
-    const calculatedVideo1Volume = Math.floor(100 * (1 - normalizedBeta));
-    const calculatedVideo2Volume = Math.floor(100 * normalizedBeta);
+    if (audio1Ref.current) audio1Ref.current.volume = calculatedAudio1Volume / 100;
+    if (audio2Ref.current) audio2Ref.current.volume = calculatedAudio2Volume / 100;
+    
+    handleVolumeChange();
 
-    // Update the state with the calculated volumes
-    setVideo1Volume(calculatedVideo1Volume);
-    setVideo2Volume(calculatedVideo2Volume);
+  }, [gyroData]);
+
+
+  function handleVolumeChange() {
+    setVolumes({
+      audio1: audio1Ref.current ? Math.floor(audio1Ref.current.volume * 100) : 0,
+      audio2: audio2Ref.current ? Math.floor(audio2Ref.current.volume * 100) : 0
+    });
   }
 
   function requestGyroAccess() {
@@ -54,114 +57,41 @@ export default function Home() {
         })
         .catch(console.error);
     } else {
-      // For non-iOS 13+ devices
       window.addEventListener('deviceorientation', handleOrientation);
     }
   }
-  
-  const videoOptions = {
-    height: '195',
-    width: '320',
-    playerVars: {
-      // https://developers.google.com/youtube/player_parameters
-      autoplay: 1, // Auto-play the video on load
-    },
-  };
-
-  let video1Ref = null;
-  let video2Ref = null;
-
-  const onVideo1Ready = (event) => {
-    video1Ref = event.target;
-  };
-
-  const onVideo2Ready = (event) => {
-    video2Ref = event.target;
-  };
-
-  useEffect(() => {
-    if (video1Ref) {
-      video1Ref.setVolume(video1Volume);
-    }
-  }, [video1Volume]);
-  
-  useEffect(() => {
-    if (video2Ref) {
-      video2Ref.setVolume(video2Volume);
-    }
-  }, [video2Volume]);  
-
-  useEffect(() => {
-    if (video1Ref) {
-      video1Ref.setVolume(video1Volume);
-    }
-  }, [video1Volume]);
-  
-  useEffect(() => {
-    if (video2Ref) {
-      video2Ref.setVolume(video2Volume);
-    }
-  }, [video2Volume]);
-
-  useEffect(() => {
-    if (video2Ref) {
-      video2Ref.setVolume(0); // Set initial volume to 0
-    }
-  }, [])
 
   return (
     <main className={styles.main}>
       <div className={styles.header}>
         <h1 className={styles.title}>
-            Welcome to <a href="https://nextjs.org">Gyroplay!</a>
+            Welcome to Gyroplay!
         </h1>
         <div>
           <p>Phone X axis value: {gyroData.beta}</p>
         </div>
         <button className={styles.button} onClick={requestGyroAccess}>Request Gyroscope Access</button>
-        <button className={styles.button} onClick={playAllVideos}>Play All</button>
       </div>
   
       <div className={styles.videoContainer}>
         <div className={styles.videoWrapper}>
-          <YouTube videoId="y6120QOlsfU" opts={videoOptions} onReady={onVideo1Ready} />
-          <div>Volume: {video1Volume}%</div>
-          <div className={styles.controls}>
-            <button onClick={() => setVideo1Volume(Math.min(video1Volume + 10, 100))}>+ Volume</button>
-            <button onClick={() => {
-              if (video1Playing) {
-                video1Ref.pauseVideo();
-              } else {
-                video1Ref.playVideo();
-              }
-              setVideo1Playing(!video1Playing);
-            }}>
-              {video1Playing ? "Pause" : "Play"}
-            </button>
-            <button onClick={() => setVideo1Volume(Math.max(video1Volume - 10, 0))}>- Volume</button>
-          </div>
-        </div>
-  
-        <div className={styles.videoWrapper}>
-          <YouTube videoId="aLZQ-0dHbiU" opts={videoOptions} onReady={onVideo2Ready} />
-          <div>Volume: {video2Volume}%</div>
-          <div className={styles.controls}>
-            <button onClick={() => setVideo2Volume(Math.min(video2Volume + 10, 100))}>+ Volume</button>
-            <button onClick={() => {
-              if (video2Playing) {
-                video2Ref.pauseVideo();
-              } else {
-                video2Ref.playVideo();
-              }
-              setVideo2Playing(!video2Playing);
-            }}>
-              {video2Playing ? "Pause" : "Play"}
-            </button>
-            <button onClick={() => setVideo2Volume(Math.max(video2Volume - 10, 0))}>- Volume</button>
-          </div>
+          <audio 
+            ref={audio1Ref} 
+            src="/bandstorm.mp3" 
+            controls 
+            onVolumeChange={handleVolumeChange}
+          />
+          <div>Volume: {volumes.audio1}%</div>
+
+          <audio 
+            ref={audio2Ref} 
+            src="/music.mp3" 
+            controls 
+            onVolumeChange={handleVolumeChange}
+          />
+          <div>Volume: {volumes.audio2}%</div>
         </div>
       </div>
     </main>
   );
-  
 }
