@@ -22,22 +22,22 @@ export default function Home() {
     };
   }, []);
 
-  useEffect(() => {
-    const absoluteBeta = Math.abs(gyroData.beta);  // Consider absolute value
-    const normalizedBeta = absoluteBeta / 90;
-    let calculatedAudio1Volume = Math.floor(100 * normalizedBeta);
-    let calculatedAudio2Volume = Math.floor(100 * (1 - normalizedBeta));
+//   useEffect(() => {
+//     const absoluteBeta = Math.abs(gyroData.beta);  // Consider absolute value
+//     const normalizedBeta = absoluteBeta / 90;
+//     let calculatedAudio1Volume = normalizedBeta;
+//     let calculatedAudio2Volume = 1 - normalizedBeta;
 
-    // Ensure volume is between 0 and 100
-    calculatedAudio1Volume = Math.min(100, Math.max(0, calculatedAudio1Volume));
-    calculatedAudio2Volume = Math.min(100, Math.max(0, calculatedAudio2Volume));
+//     // Ensure volume is between 0 and 1
+//     calculatedAudio1Volume = Math.min(1, Math.max(0, calculatedAudio1Volume));
+//     calculatedAudio2Volume = Math.min(1, Math.max(0, calculatedAudio2Volume));
 
-    if (audio1Ref.current) audio1Ref.current.volume = calculatedAudio1Volume / 100;
-    if (audio2Ref.current) audio2Ref.current.volume = calculatedAudio2Volume / 100;
+//     if (audio1Ref.current) audio1Ref.current.volume = calculatedAudio1Volume;
+//     if (audio2Ref.current) audio2Ref.current.volume = calculatedAudio2Volume;
     
-    handleVolumeChange();
+//     handleVolumeChange();
 
-  }, [gyroData]);
+// }, [gyroData]);
 
 
   function handleVolumeChange() {
@@ -68,7 +68,7 @@ export default function Home() {
             Welcome to Gyroplay!
         </h1>
         <div>
-          <p>Phone X axis value: {gyroData.beta}</p>
+          <p>Phone X axis value: {gyroData.beta ? gyroData.beta.toFixed(2) : 'N/A'}</p>
         </div>
         <button className={styles.button} onClick={requestGyroAccess}>Request Gyroscope Access</button>
       </div>
