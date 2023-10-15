@@ -3,40 +3,44 @@ import styles from './page.module.css'
 import { useState, useEffect, useRef } from 'react';
 
 export default function Home() {
-  const [gyroData, setGyroData] = useState({ alpha: 0, beta: 0, gamma: 0 });
-  const [volumes, setVolumes] = useState({ audio1: 0, audio2: 0 });
+  const [tiltValue, setTiltValue] = useState(0); // capturing the tilt along x-axis
+  const [volumes, setVolumes] = useState({ audio1: 50, audio2: 50 });
+  const [gradientColor, setGradientColor] = useState('#FF0000');
 
   const audio1Ref = useRef(null);
   const audio2Ref = useRef(null);
 
-  const handleOrientation = (event) => {
-    const { alpha, beta, gamma } = event;
-    setGyroData({ alpha, beta, gamma });
+  const handleMotion = (event) => {
+    const xTilt = event.accelerationIncludingGravity.y;
+    setTiltValue(xTilt);
   };
-  
+
   useEffect(() => {
-    window.addEventListener('deviceorientation', handleOrientation);
+    window.addEventListener('devicemotion', handleMotion);
     return () => {
-      window.removeEventListener('deviceorientation', handleOrientation);
+      window.removeEventListener('devicemotion', handleMotion);
     };
   }, []);
 
   useEffect(() => {
-    const normalizedBeta = gyroData.beta / 90;  // Normalize beta value to range [-1, 1]
-    let calculatedAudio1Volume = 0.5 + (normalizedBeta / 2); // When beta is 0, volume is 0.5; when beta is 90, volume is 1
-    let calculatedAudio2Volume = 0.5 - (normalizedBeta / 2); // When beta is 0, volume is 0.5; when beta is -90, volume is 1
-
-    // Ensure volume is between 0 and 1
+    const normalizedTilt = tiltValue / 10; // Assuming the tilt range is [-10, 10]
+    let calculatedAudio1Volume = 0.5 + (normalizedTilt / 2);
+    let calculatedAudio2Volume = 0.5 - (normalizedTilt / 2);
     calculatedAudio1Volume = Math.min(1, Math.max(0, calculatedAudio1Volume));
     calculatedAudio2Volume = Math.min(1, Math.max(0, calculatedAudio2Volume));
-
     if (audio1Ref.current) audio1Ref.current.volume = calculatedAudio1Volume;
     if (audio2Ref.current) audio2Ref.current.volume = calculatedAudio2Volume;
 
-    handleVolumeChange();
 
-}, [gyroData]);
+    setVolumes({
+      audio1: Math.round(calculatedAudio1Volume * 100),
+      audio2: Math.round(calculatedAudio2Volume * 100)
+    })
 
+    const color = computeGradientColor(tiltValue);
+    setGradientColor(color);
+
+  }, [tiltValue]);
 
   function handleVolumeChange() {
     setVolumes({
@@ -45,51 +49,60 @@ export default function Home() {
     });
   }
 
-  function requestGyroAccess() {
-    if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-      DeviceOrientationEvent.requestPermission()
+  function computeGradientColor(tilt) {
+    const normalizedValue = (tilt + 10) / 20; // Normalize the tilt value between 0 and 1
+    
+    const redComponent = Math.floor(255 * normalizedValue);
+    const blueComponent = 255 - redComponent;
+  
+    return `rgb(${redComponent}, 0, ${blueComponent})`;
+  }
+  
+
+  const [hasPermission, setHasPermission] = useState(false); // state to track motion access permissions
+
+  function requestMotionAccess() {
+    if (typeof DeviceMotionEvent.requestPermission === 'function') {
+      DeviceMotionEvent.requestPermission()
         .then(permissionState => {
           if (permissionState === 'granted') {
-            window.addEventListener('deviceorientation', handleOrientation);
+            window.addEventListener('devicemotion', handleMotion);
+            setHasPermission(true); // set permission to true if granted
           }
         })
         .catch(console.error);
     } else {
-      window.addEventListener('deviceorientation', handleOrientation);
+      window.addEventListener('devicemotion', handleMotion);
+      setHasPermission(true); // set permission to true for non-iOS 13+ devices
     }
   }
 
   return (
-    <main className={styles.main}>
+    <main className={styles.main} style={{ background: `linear-gradient(to bottom, ${gradientColor}, white)` }}>
       <div className={styles.header}>
         <h1 className={styles.title}>
             Welcome to Gyroplay!
         </h1>
         <div>
-          <p>Phone X axis value: {gyroData.beta ? gyroData.beta.toFixed(2) : 'N/A'}</p>
+          <p>Phone tilt value (x-axis): {tiltValue ? tiltValue.toFixed(2) : 'N/A'}</p>
         </div>
-        <button className={styles.button} onClick={requestGyroAccess}>Request Gyroscope Access</button>
       </div>
-  
-      <div className={styles.videoContainer}>
-        <div className={styles.videoWrapper}>
-          <audio 
-            ref={audio1Ref} 
-            src="/bandstorm.mp3" 
-            controls 
-            onVolumeChange={handleVolumeChange}
-          />
-          <div>Volume: {volumes.audio1}%</div>
 
-          <audio 
-            ref={audio2Ref} 
-            src="/music.mp3" 
-            controls 
-            onVolumeChange={handleVolumeChange}
-          />
-          <div>Volume: {volumes.audio2}%</div>
-        </div>
-      </div>
+      {!hasPermission ? ( 
+          <>
+            <button className={styles.button} onClick={requestMotionAccess}>Request Motion Access</button>
+          </>
+        ) : (
+          <div className={styles.videoContainer}>
+            <div className={styles.videoWrapper}>
+              <audio ref={audio1Ref} src="/bandstorm.mp3" controls onVolumeChange={handleVolumeChange} />
+              <div>Volume: {volumes.audio1}%</div>
+
+              <audio ref={audio2Ref} src="/music.mp3" controls onVolumeChange={handleVolumeChange} />
+              <div>Volume: {volumes.audio2}%</div>
+            </div>
+          </div>
+        )}
     </main>
   );
 }

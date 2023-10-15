@@ -1,9 +1,13 @@
 /* styles.module.css */
 .main {
+  height: 100vh; /* Full height of the viewport */
+  width: 100vw;  /* Full width of the viewport */
+  margin: 0;
+  padding: 0;
+  overflow: hidden; /* Ensure no scrolling */
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 20px;
 }
 
 .header {
