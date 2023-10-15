@@ -9,35 +9,33 @@ export default function Home() {
   const audio1Ref = useRef(null);
   const audio2Ref = useRef(null);
 
+  const handleOrientation = (event) => {
+    const { alpha, beta, gamma } = event;
+    setGyroData({ alpha, beta, gamma });
+  };
+  
   useEffect(() => {
-    const handleOrientation = (event) => {
-      const { alpha, beta, gamma } = event;
-      setGyroData({ alpha, beta, gamma });
-    };
-
     window.addEventListener('deviceorientation', handleOrientation);
-
     return () => {
       window.removeEventListener('deviceorientation', handleOrientation);
     };
   }, []);
 
-//   useEffect(() => {
-//     const absoluteBeta = Math.abs(gyroData.beta);  // Consider absolute value
-//     const normalizedBeta = absoluteBeta / 90;
-//     let calculatedAudio1Volume = normalizedBeta;
-//     let calculatedAudio2Volume = 1 - normalizedBeta;
+  useEffect(() => {
+    const normalizedBeta = gyroData.beta / 90;  // Normalize beta value to range [-1, 1]
+    let calculatedAudio1Volume = 0.5 + (normalizedBeta / 2); // When beta is 0, volume is 0.5; when beta is 90, volume is 1
+    let calculatedAudio2Volume = 0.5 - (normalizedBeta / 2); // When beta is 0, volume is 0.5; when beta is -90, volume is 1
 
-//     // Ensure volume is between 0 and 1
-//     calculatedAudio1Volume = Math.min(1, Math.max(0, calculatedAudio1Volume));
-//     calculatedAudio2Volume = Math.min(1, Math.max(0, calculatedAudio2Volume));
+    // Ensure volume is between 0 and 1
+    calculatedAudio1Volume = Math.min(1, Math.max(0, calculatedAudio1Volume));
+    calculatedAudio2Volume = Math.min(1, Math.max(0, calculatedAudio2Volume));
 
-//     if (audio1Ref.current) audio1Ref.current.volume = calculatedAudio1Volume;
-//     if (audio2Ref.current) audio2Ref.current.volume = calculatedAudio2Volume;
-    
-//     handleVolumeChange();
+    if (audio1Ref.current) audio1Ref.current.volume = calculatedAudio1Volume;
+    if (audio2Ref.current) audio2Ref.current.volume = calculatedAudio2Volume;
 
-// }, [gyroData]);
+    handleVolumeChange();
+
+}, [gyroData]);
 
 
   function handleVolumeChange() {
